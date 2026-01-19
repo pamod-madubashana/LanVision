@@ -712,31 +712,37 @@ export class ScanController {
       });
 
       // Send initial connection confirmation
-      res.write(`event: connected\ndata: {"scanId":"${scanId}","status":"${session.status}"}\n\n`);
+      const connectedData = { scanId: scanId as string, status: session.status };
+      res.write(`event: connected\ndata: ${JSON.stringify(connectedData)}\n\n`);
 
       // Send existing buffered logs immediately
       if (session.logs.length > 0) {
         session.logs.forEach(log => {
-          res.write(`event: log\ndata: {"message":"${log.replace(/"/g, '\\"')}"}\n\n`);
+          const dataObj = { message: log };
+          res.write(`event: log\ndata: ${JSON.stringify(dataObj)}\n\n`);
         });
       }
 
       // Set up event listeners for real-time updates
       const logHandler = (event: any) => {
-        res.write(`event: log\ndata: {"message":"${event.message.replace(/"/g, '\\"')}"}\n\n`);
+        const dataObj = { message: event.message };
+        res.write(`event: log\ndata: ${JSON.stringify(dataObj)}\n\n`);
       };
 
       const statusHandler = (event: any) => {
-        res.write(`event: status\ndata: {"status":"${event.status}"}\n\n`);
+        const dataObj = { status: event.status };
+        res.write(`event: status\ndata: ${JSON.stringify(dataObj)}\n\n`);
       };
 
       const doneHandler = (event: any) => {
-        res.write(`event: done\ndata: {"result":${JSON.stringify(event.result)}}\n\n`);
+        const dataObj = { result: event.result };
+        res.write(`event: done\ndata: ${JSON.stringify(dataObj)}\n\n`);
         cleanup();
       };
 
       const errorHandler = (event: any) => {
-        res.write(`event: error\ndata: {"message":"${event.message.replace(/"/g, '\\"')}"}\n\n`);
+        const dataObj = { message: event.message };
+        res.write(`event: error\ndata: ${JSON.stringify(dataObj)}\n\n`);
         cleanup();
       };
 
