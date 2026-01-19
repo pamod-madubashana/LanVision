@@ -315,6 +315,32 @@ export class ScanController {
     }
   }
 
+  // Check Nmap availability
+  static async checkNmapAvailability(req: Request, res: Response) {
+    try {
+      const nmapService = NmapService.getInstance();
+      
+      const isAvailable = await nmapService.isNmapAvailable();
+      const version = await nmapService.getNmapVersion();
+      
+      res.json({
+        success: true,
+        data: {
+          nmapAvailable: isAvailable,
+          version: version
+        }
+      });
+    } catch (error: any) {
+      logger.error('Check Nmap availability error:', error);
+      res.status(500).json({
+        success: false,
+        error: {
+          message: 'Failed to check Nmap availability'
+        }
+      });
+    }
+  }
+
   // Compare two scans
   static async compareScans(req: Request, res: Response) {
     try {

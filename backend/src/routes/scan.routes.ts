@@ -8,6 +8,9 @@ const router = Router();
 // All scan routes require authentication
 router.use(authenticateToken);
 
+// Health check for nmap availability
+router.get('/health/nmap', ScanController.checkNmapAvailability);
+
 // Scan routes
 router.post('/start', 
   validateRequiredFields(['target', 'profile']),

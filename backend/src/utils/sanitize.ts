@@ -99,14 +99,15 @@ export const escapeShellArg = (arg: string): string => {
 // Validate scan arguments to ensure they're safe
 export const validateScanArgs = (args: string[]): boolean => {
   const allowedFlags = [
-    '-T4', '-F', '-sV', '-O', '-p', '--top-ports',
-    '-n', '-Pn', '--open', '--host-timeout'
+    '-T4', '-F', '-sV', '-O', '-n', '-Pn', '--open', '--top-ports', '--host-timeout', '-oX', '-'
   ];
   
   const allowedPatterns = [
-    /^-p\d+(,\d+)*(-\d+)?$/,  // Port specification
-    /^--top-ports=\d+$/,       // Top ports
-    /^--host-timeout=\d+[smh]?$/  // Timeout values
+    /^-p\d+(-\d+)?$/,          // Single port or port range like -p22 or -p1-100
+    /^-p[\d,]+$/,              // Comma separated ports like -p22,80,443
+    /^-p\d+-\d+(,[\d-]+)*$/,   // Multiple ranges like -p22-80,100-200
+    /^--top-ports=\d+$/,        // Top ports
+    /^--host-timeout=\d+[smh]?$/ // Timeout values
   ];
   
   for (const arg of args) {

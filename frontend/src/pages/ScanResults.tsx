@@ -84,7 +84,8 @@ const ScanResults: React.FC = () => {
         
         // Auto-refresh if scan is still running
         if (response.data.scan.status === 'running' || response.data.scan.status === 'pending') {
-          const interval = setInterval(fetchScanResults, 5000);
+          // Poll every 15 seconds to avoid rate limiting
+          const interval = setInterval(fetchScanResults, 15000);
           setRefreshInterval(interval);
         } else if (refreshInterval) {
           clearInterval(refreshInterval);
