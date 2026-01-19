@@ -1,20 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../api/apiService';
+import type { ScanConfig } from '../types/scanConfig';
 import Card from '../components/Card';
-import RiskBadge from '../components/RiskBadge';
 import LoadingSpinner from '../components/LoadingSpinner';
 import LiveScanLogs from '../components/LiveScanLogs';
+import RiskBadge from '../components/RiskBadge';
 import { 
-  ServerIcon, 
+  ArrowPathIcon, 
   ClockIcon, 
-  ArrowPathIcon,
-  InformationCircleIcon
+  InformationCircleIcon,
+  ServerIcon
 } from '@heroicons/react/24/outline';
 
 interface ScanResult {
-  id: string;
+  _id: string;
   name: string;
   target: string;
   profile: string;
@@ -54,7 +55,8 @@ const ScanResults: React.FC = () => {
   const [scan, setScan] = useState<ScanResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [refreshInterval, setRefreshInterval] = useState<ReturnType<typeof setInterval> | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -66,10 +68,14 @@ const ScanResults: React.FC = () => {
       fetchScanResults();
     }
 
+    // Cleanup function
     return () => {
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
+      // Close any existing EventSource connection
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
       }
+      setIsStreaming(false);
     };
   }, [scanId, isAuthenticated, navigate]);
 
@@ -86,35 +92,14 @@ const ScanResults: React.FC = () => {
       if (response.success) {
         setScan(response.data.scan);
         
-        // Clear any existing interval before setting a new one
-        if (refreshInterval) {
-          clearInterval(refreshInterval);
-          setRefreshInterval(null);
-        }
+        // For running/pending scans, rely on SSE streaming instead of polling
+        // No interval setup needed - streaming handles real-time updates
         
-        // Auto-refresh if scan is still running
-        if (response.data.scan.status === 'running' || response.data.scan.status === 'pending') {
-          // Poll every 15 seconds to avoid rate limiting
-          const interval = setInterval(() => fetchScanResults(true), 15000);
-          setRefreshInterval(interval);
-        }
       } else {
         setError(response.error?.message || 'Failed to load scan results');
-        
-        // Clear interval if scan is not found or other error occurs
-        if (refreshInterval) {
-          clearInterval(refreshInterval);
-          setRefreshInterval(null);
-        }
       }
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'An error occurred');
-      
-      // Clear interval on error to prevent continuous error polling
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
-        setRefreshInterval(null);
-      }
     } finally {
       // Only set loading to false on initial load, not during polling
       if (!isPolling) {
@@ -265,78 +250,88 @@ const ScanResults: React.FC = () => {
           onStatusChange={(newStatus) => {
             // Update local scan status when streaming updates it
             setScan(prev => prev ? { ...prev, status: newStatus } : null);
+            // Set streaming state when scan starts running
+            if (newStatus === 'running' || newStatus === 'starting') {
+              setIsStreaming(true);
+            }
           }}
           onComplete={(_result) => {
-            // Refresh scan data when streaming completes
+            // Streaming completed - make one final GET request for complete data
+            setIsStreaming(false);
             fetchScanResults();
           }}
           onError={(errorMessage) => {
             setError(errorMessage);
+            setIsStreaming(false);
           }}
         />
       ) : (
         <Card title="Discovered Hosts">
           {scan.results && scan.results.length > 0 ? (
-            <div className="overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
+            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+              <table className="min-w-full divide-y divide-gray-300">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Host
+                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
+                      IP Address
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                      Hostname
+                    </th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                      Ports
+                    </th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                       Risk Level
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Open Ports
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      OS Guess
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="divide-y divide-gray-200 bg-white">
                   {scan.results.map((host) => (
-                    <tr key={host._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{host.ip}</div>
-                          {host.hostname && (
-                            <div className="text-sm text-gray-500">{host.hostname}</div>
-                          )}
-                        </div>
+                    <tr key={host._id}>
+                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+                        {host.ip}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          host.status === 'up' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-red-100 text-red-800'
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        {host.hostname || 'N/A'}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
+                          host.status === 'up' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                         }`}>
-                          {host.status.toUpperCase()}
+                          {host.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        {host.ports.length > 0 ? (
+                          <div className="space-y-1">
+                            {host.ports.slice(0, 3).map((port) => (
+                              <div key={port.port} className="flex items-center">
+                                <span className="font-mono text-xs">
+                                  {port.port}/{port.protocol}
+                                </span>
+                                {port.service && (
+                                  <span className="ml-2 text-xs text-gray-500">
+                                    ({port.service})
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                            {host.ports.length > 3 && (
+                              <div className="text-xs text-gray-400">
+                                +{host.ports.length - 3} more
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">No open ports</span>
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                         <RiskBadge level={host.riskLevel as any} />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {host.ports.filter(p => p.state === 'open').length} open
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {host.osGuess || 'Unknown'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <Link 
-                          to={`/scan/${scan.id}/host/${host._id}`}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          View Details
-                        </Link>
                       </td>
                     </tr>
                   ))}
@@ -347,12 +342,7 @@ const ScanResults: React.FC = () => {
             <div className="text-center py-12">
               <ServerIcon className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">No hosts discovered</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                {scan.status === 'completed' 
-                  ? 'No hosts were found during this scan.'
-                  : 'Scan is still in progress...'
-                }
-              </p>
+              <p className="mt-1 text-sm text-gray-500">The scan completed but no hosts were found.</p>
             </div>
           )}
         </Card>
