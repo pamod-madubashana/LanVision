@@ -1,6 +1,9 @@
 import { spawn } from 'child_process';
 import { sanitizeIP, validateScanArgs, escapeShellArg } from '../utils/sanitize';
 import logger from '../utils/logger';
+import { ScanConfig } from '../types/scanConfig';
+import { validateScanConfig } from '../utils/scanValidation';
+import { buildNmapArgs, validateGeneratedArgs } from '../utils/nmapArgsBuilder';
 
 export interface NmapScanConfig {
   target: string;
@@ -26,6 +29,66 @@ export class NmapService {
       NmapService.instance = new NmapService();
     }
     return NmapService.instance;
+  }
+
+  // Execute Nmap scan with custom builder configuration
+  async executeScanBuilder(scanConfig: ScanConfig): Promise<NmapScanResult> {
+    const startTime = Date.now();
+    
+    try {
+      // Validate scan configuration
+      const validationErrors = validateScanConfig(scanConfig);
+      if (validationErrors.length > 0) {
+        const errorMessages = validationErrors.map(e => `${e.field}: ${e.message}`).join('; ');
+        throw new Error(`Invalid scan configuration: ${errorMessages}`);
+      }
+
+      // Build Nmap arguments from ScanConfig
+      const args = buildNmapArgs(scanConfig);
+      
+      // Double-check generated arguments for safety
+      if (!validateGeneratedArgs(args)) {
+        throw new Error('Generated Nmap arguments failed safety validation');
+      }
+
+      logger.info('Starting custom Nmap scan', { 
+        target: scanConfig.target, 
+        profile: scanConfig.scanProfile,
+        args: args.filter(arg => arg !== scanConfig.target) // Log without target for security
+      });
+
+      // Execute Nmap with timeout based on host timeout plus buffer
+      const timeoutBuffer = 30000; // 30 second buffer
+      const totalTimeout = (scanConfig.hostTimeoutSeconds * 1000) + timeoutBuffer;
+      
+      const result = await this.runNmapCommand(args, totalTimeout);
+      
+      const duration = Date.now() - startTime;
+      
+      logger.scanEvent('nmap-custom-scan', 'completed', {
+        target: scanConfig.target,
+        profile: scanConfig.scanProfile,
+        duration,
+        exitCode: result.exitCode
+      });
+
+      return {
+        ...result,
+        duration
+      };
+
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      
+      logger.error('Custom Nmap scan failed', {
+        target: scanConfig.target,
+        profile: scanConfig.scanProfile,
+        error: error.message,
+        duration
+      });
+
+      throw new Error(`Custom Nmap scan failed: ${error.message}`);
+    }
   }
 
   // Execute Nmap scan with safety checks
