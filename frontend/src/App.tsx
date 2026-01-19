@@ -6,6 +6,7 @@ import NewScan from './pages/NewScan';
 import ScanResults from './pages/ScanResults';
 import HostDetails from './pages/HostDetails';
 import ScanHistory from './pages/ScanHistory';
+import CompareScans from './pages/CompareScans';
 import Header from './components/Header';
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
               <Route path="/scan/:scanId" element={<ScanResults />} />
               <Route path="/scan/:scanId/host/:hostId" element={<HostDetails />} />
               <Route path="/history" element={<ScanHistory />} />
+              <Route path="/compare" element={<CompareScans />} />
             </Routes>
           </main>
         </div>

@@ -38,6 +38,9 @@ const Header: React.FC = () => {
               <Link to="/history" className="text-gray-700 hover:text-blue-600 transition-colors">
                 History
               </Link>
+              <Link to="/compare" className="text-gray-700 hover:text-blue-600 transition-colors">
+                Compare
+              </Link>
             </nav>
           )}
 
