@@ -3,7 +3,7 @@
  * Provides robust validation for all scan configuration options
  */
 
-import { ScanConfig, VALIDATION_RULES, ScanProfile } from './scanConfig';
+import { ScanConfig, VALIDATION_RULES, ScanProfile } from '../types/scanConfig';
 
 export interface ValidationError {
   field: string;
