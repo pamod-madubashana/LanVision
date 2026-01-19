@@ -6,7 +6,6 @@ import Card from '../components/Card';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { 
   ServerIcon, 
-  ClockIcon,
   ArrowPathIcon
 } from '@heroicons/react/24/outline';
 
