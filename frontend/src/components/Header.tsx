@@ -35,6 +35,9 @@ const Header: React.FC = () => {
               <Link to="/scan/new" className="text-gray-700 hover:text-blue-600 transition-colors" data-discover="true">
                 New Scan
               </Link>
+              <Link to="/scan/builder" className="text-gray-700 hover:text-blue-600 transition-colors" data-discover="true">
+                Custom Scan Builder
+              </Link>
               <Link to="/history" className="text-gray-700 hover:text-blue-600 transition-colors" data-discover="true">
                 History
               </Link>

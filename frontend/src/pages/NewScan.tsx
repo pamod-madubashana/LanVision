@@ -181,27 +181,36 @@ const NewScan: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-sm text-gray-500">
               <p>Note: Scans may take several minutes to complete depending on target size and profile.</p>
             </div>
-            <button
-              type="submit"
-              disabled={loading || success}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <>
-                  <LoadingSpinner size="sm" className="mr-2" />
-                  Starting Scan...
-                </>
-              ) : (
-                <>
-                  <ServerIcon className="h-5 w-5 mr-2" />
-                  Start Scan
-                </>
-              )}
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <button
+                type="submit"
+                disabled={loading || success}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto justify-center"
+              >
+                {loading ? (
+                  <>
+                    <LoadingSpinner size="sm" className="mr-2" />
+                    Starting Scan...
+                  </>
+                ) : (
+                  <>
+                    <ServerIcon className="h-5 w-5 mr-2" />
+                    Start Scan
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/scan/builder')}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 w-full sm:w-auto justify-center"
+              >
+                Try Advanced Builder
+              </button>
+            </div>
           </div>
         </form>
       </Card>

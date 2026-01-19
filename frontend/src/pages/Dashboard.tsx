@@ -85,14 +85,24 @@ const Dashboard: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
           <p className="mt-2 text-gray-600">Welcome back, {user?.username}!</p>
         </div>
-        <Link
-          to="/scan/new"
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          data-discover="true"
-        >
-          <ServerIcon className="h-5 w-5 mr-2 text-white" />
-          <span className="text-white">New Scan</span>
-        </Link>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Link
+            to="/scan/new"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            data-discover="true"
+          >
+            <ServerIcon className="h-5 w-5 mr-2 text-white" />
+            <span className="text-white">New Scan</span>
+          </Link>
+          <Link
+            to="/scan/builder"
+            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            data-discover="true"
+          >
+            <ServerIcon className="h-5 w-5 mr-2 text-gray-700" />
+            <span className="text-gray-700">Advanced Builder</span>
+          </Link>
+        </div>
       </div>
 
       {error && (
