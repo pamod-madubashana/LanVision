@@ -4,7 +4,7 @@ export interface IScan extends Document {
   userId: mongoose.Types.ObjectId;
   name?: string;
   target: string;
-  profile: 'quick' | 'full';
+  profile: 'quick' | 'full' | 'balanced' | 'custom';
   startedAt: Date;
   finishedAt?: Date;
   durationMs?: number;
@@ -85,7 +85,7 @@ const ScanSchema = new Schema<IScan>({
   target: { type: String, required: true },
   profile: { 
     type: String, 
-    enum: ['quick', 'full'], 
+    enum: ['quick', 'full', 'balanced', 'custom'], 
     required: true 
   },
   startedAt: { type: Date, required: true },

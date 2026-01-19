@@ -7,7 +7,7 @@ import { buildNmapArgs, validateGeneratedArgs } from '../utils/nmapArgsBuilder';
 
 export interface NmapScanConfig {
   target: string;
-  profile: 'quick' | 'full';
+  profile: 'quick' | 'full' | 'balanced' | 'custom';
   customPorts?: string;
   timeout?: number;
 }
