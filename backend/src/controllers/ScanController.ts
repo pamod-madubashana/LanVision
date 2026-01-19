@@ -3,6 +3,8 @@ import Scan from '../models/Scan';
 import { NmapService } from '../services/nmapService';
 import { NmapXmlParser } from '../services/parser/nmapXmlParser';
 import logger from '../utils/logger';
+import { ScanConfig } from '../types/scanConfig';
+import { generateCommandPreview } from '../utils/nmapArgsBuilder';
 
 interface ScanRequest {
   target: string;
@@ -424,6 +426,156 @@ export class ScanController {
         success: false,
         error: {
           message: 'Internal server error'
+        }
+      });
+    }
+  }
+
+  // Start custom scan with builder configuration
+  static async startCustomScan(req: Request, res: Response) {
+    try {
+      const scanConfig: ScanConfig = req.body;
+      const userId = (req as any).user?.userId;
+      const scanName = req.body.name || `Custom Scan of ${scanConfig.target}`;
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          error: {
+            message: 'Authentication required'
+          }
+        });
+      }
+
+      // Create initial scan record
+      const scan = new Scan({
+        userId,
+        name: scanName,
+        target: scanConfig.target,
+        profile: scanConfig.scanProfile,
+        startedAt: new Date(),
+        status: 'pending'
+      });
+
+      await scan.save();
+
+      logger.scanEvent(scan._id.toString(), 'custom-started', { 
+        target: scanConfig.target, 
+        profile: scanConfig.scanProfile,
+        userId 
+      });
+
+      // Start custom scan in background
+      ScanController.executeCustomScanInBackground(scan._id.toString(), scanConfig);
+
+      res.status(202).json({
+        success: true,
+        data: {
+          scanId: scan._id,
+          status: 'pending',
+          message: 'Custom scan started successfully'
+        }
+      });
+
+    } catch (error: any) {
+      logger.error('Start custom scan error:', error);
+      res.status(500).json({
+        success: false,
+        error: {
+          message: 'Failed to start custom scan'
+        }
+      });
+    }
+  }
+
+  // Execute custom scan in background
+  private static async executeCustomScanInBackground(scanId: string, scanConfig: ScanConfig) {
+    try {
+      const scan = await Scan.findById(scanId);
+      if (!scan) return;
+
+      const nmapService = NmapService.getInstance();
+      
+      // Update status to running
+      scan.status = 'running';
+      await scan.save();
+
+      // Execute Nmap scan with custom configuration
+      const result = await nmapService.executeScanBuilder(scanConfig);
+
+      // Parse results
+      const parsedResult = new NmapXmlParser().parse(result.stdout);
+
+      // Update scan with results
+      scan.results = parsedResult.hosts;
+      scan.summary = {
+        totalHosts: parsedResult.stats.totalHosts,
+        hostsUp: parsedResult.stats.hostsUp,
+        totalOpenPorts: parsedResult.stats.totalOpenPorts
+      };
+      scan.finishedAt = new Date();
+      
+      // Calculate duration
+      if (parsedResult.stats.durationSeconds > 0) {
+        scan.durationMs = Math.round(parsedResult.stats.durationSeconds * 1000);
+      } else {
+        const start = scan.startedAt ? new Date(scan.startedAt).getTime() : Date.now();
+        const finish = new Date().getTime();
+        scan.durationMs = finish - start;
+      }
+      
+      scan.status = 'completed';
+
+      await scan.save();
+
+      logger.scanEvent(scanId, 'custom-completed', {
+        hosts: parsedResult.stats.hostsUp,
+        ports: parsedResult.stats.totalOpenPorts,
+        duration: parsedResult.stats.durationSeconds
+      });
+
+    } catch (error: any) {
+      logger.error('Background custom scan execution failed:', { 
+        scanId, 
+        error: error.message 
+      });
+
+      // Update scan status to failed
+      try {
+        const scan = await Scan.findById(scanId);
+        if (scan) {
+          scan.status = 'failed';
+          scan.finishedAt = new Date();
+          await scan.save();
+        }
+      } catch (updateError) {
+        logger.error('Failed to update scan status after error:', updateError);
+      }
+    }
+  }
+
+  // Generate command preview for scan configuration
+  static async getCommandPreview(req: Request, res: Response) {
+    try {
+      const scanConfig: ScanConfig = req.body;
+      
+      // Generate command preview
+      const commandPreview = generateCommandPreview(scanConfig);
+      
+      res.json({
+        success: true,
+        data: {
+          command: commandPreview,
+          config: scanConfig
+        }
+      });
+
+    } catch (error: any) {
+      logger.error('Command preview error:', error);
+      res.status(500).json({
+        success: false,
+        error: {
+          message: 'Failed to generate command preview'
         }
       });
     }

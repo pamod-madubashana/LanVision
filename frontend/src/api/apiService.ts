@@ -64,9 +64,20 @@ class ApiService {
     return response.data;
   }
 
-  // Scan endpoints
+  // Traditional scan endpoints
   async startScan(target: string, profile: string, name?: string) {
     const response = await this.client.post('/scans/start', { target, profile, name });
+    return response.data;
+  }
+
+  // Custom scan builder endpoints
+  async startCustomScan(scanConfig: any, name?: string) {
+    const response = await this.client.post('/scans/builder/start', { ...scanConfig, name });
+    return response.data;
+  }
+
+  async getCommandPreview(scanConfig: any) {
+    const response = await this.client.post('/scans/builder/preview', scanConfig);
     return response.data;
   }
 

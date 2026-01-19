@@ -11,12 +11,23 @@ router.use(authenticateToken);
 // Health check for nmap availability
 router.get('/health/nmap', ScanController.checkNmapAvailability);
 
-// Scan routes
+// Traditional scan routes
 router.post('/start', 
   validateRequiredFields(['target', 'profile']),
   validateTargetFormat,
   validateScanProfile,
   ScanController.startScan
+);
+
+// Custom scan builder routes
+router.post('/builder/start', 
+  authenticateToken,
+  ScanController.startCustomScan
+);
+
+router.post('/builder/preview', 
+  authenticateToken,
+  ScanController.getCommandPreview
 );
 
 router.get('/:scanId', ScanController.getScan);
