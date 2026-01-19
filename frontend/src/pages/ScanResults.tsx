@@ -72,9 +72,12 @@ const ScanResults: React.FC = () => {
     };
   }, [scanId, isAuthenticated, navigate]);
 
-  const fetchScanResults = async () => {
+  const fetchScanResults = async (isPolling: boolean = false) => {
     try {
-      setLoading(true);
+      // Don't set loading to true during polling to avoid UI flickering
+      if (!isPolling) {
+        setLoading(true);
+      }
       setError('');
       
       const response = await apiService.getScan(scanId!);
@@ -82,22 +85,40 @@ const ScanResults: React.FC = () => {
       if (response.success) {
         setScan(response.data.scan);
         
-        // Auto-refresh if scan is still running
-        if (response.data.scan.status === 'running' || response.data.scan.status === 'pending') {
-          // Poll every 15 seconds to avoid rate limiting
-          const interval = setInterval(fetchScanResults, 15000);
-          setRefreshInterval(interval);
-        } else if (refreshInterval) {
+        // Clear any existing interval before setting a new one
+        if (refreshInterval) {
           clearInterval(refreshInterval);
           setRefreshInterval(null);
         }
+        
+        // Auto-refresh if scan is still running
+        if (response.data.scan.status === 'running' || response.data.scan.status === 'pending') {
+          // Poll every 15 seconds to avoid rate limiting
+          const interval = setInterval(() => fetchScanResults(true), 15000);
+          setRefreshInterval(interval);
+        }
       } else {
         setError(response.error?.message || 'Failed to load scan results');
+        
+        // Clear interval if scan is not found or other error occurs
+        if (refreshInterval) {
+          clearInterval(refreshInterval);
+          setRefreshInterval(null);
+        }
       }
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'An error occurred');
+      
+      // Clear interval on error to prevent continuous error polling
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+        setRefreshInterval(null);
+      }
     } finally {
-      setLoading(false);
+      // Only set loading to false on initial load, not during polling
+      if (!isPolling) {
+        setLoading(false);
+      }
     }
   };
 
@@ -136,7 +157,7 @@ const ScanResults: React.FC = () => {
       <div className="rounded-md bg-red-50 p-4">
         <div className="text-sm text-red-700">{error}</div>
         <button
-          onClick={fetchScanResults}
+          onClick={() => fetchScanResults(false)}
           className="mt-2 text-sm text-red-600 hover:text-red-800"
         >
           Retry

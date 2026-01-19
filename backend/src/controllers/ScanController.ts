@@ -113,7 +113,17 @@ export class ScanController {
         totalOpenPorts: parsedResult.stats.totalOpenPorts
       };
       scan.finishedAt = new Date();
-      scan.durationMs = Math.round(parsedResult.stats.durationSeconds * 1000);
+      
+      // Calculate duration based on actual execution time if not available from nmap output
+      if (parsedResult.stats.durationSeconds > 0) {
+        scan.durationMs = Math.round(parsedResult.stats.durationSeconds * 1000);
+      } else {
+        // Fallback to time difference between start and finish
+        const start = scan.startedAt ? new Date(scan.startedAt).getTime() : Date.now();
+        const finish = new Date().getTime();
+        scan.durationMs = finish - start;
+      }
+      
       scan.status = 'completed';
 
       await scan.save();
