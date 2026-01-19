@@ -39,4 +39,51 @@ app.use('/api/', rateLimiter(
 
 // Request logging
 app.use((req, res, next) => {
-  logger.info(`
+  logger.info(`${req.method} ${req.path}`, {
+    ip: req.ip,
+    userAgent: req.get('User-Agent')
+  });
+  next();
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    message: 'Network Scanner Dashboard API is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Connect to MongoDB
+const connectDB = async () => {
+  try {
+    const conn = await mongoose.connect(process.env.MONGO_URI || '');
+    logger.info(`MongoDB Connected: ${conn.connection.host}`);
+  } catch (error) {
+    logger.error('Database connection error:', error);
+    process.exit(1);
+  }
+};
+
+// Start server
+const startServer = async () => {
+  await connectDB();
+  
+  app.listen(PORT, () => {
+    logger.info(`Server running on port ${PORT}`);
+    logger.info(`Environment: ${process.env.NODE_ENV}`);
+    logger.info(`Public scan override: ${process.env.ADMIN_ALLOW_PUBLIC_SCAN}`);
+  });
+};
+
+// Error handling middleware
+app.use(notFound);
+app.use(errorHandler);
+
+startServer().catch((error) => {
+  logger.error('Failed to start server:', error);
+  process.exit(1);
+});
+
+export default app;
