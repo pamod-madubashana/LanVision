@@ -7,6 +7,7 @@ import { errorHandler, notFound } from './middleware/errorHandler';
 import { rateLimiter } from './middleware/rateLimit';
 import logger from './utils/logger';
 import apiRoutes from './routes/index';
+import { initializeDefaultAdmin } from './utils/initializeAdmin';
 
 // Load environment variables
 dotenv.config();
@@ -39,13 +40,13 @@ app.use('/api/', rateLimiter(
 ));
 
 // Request logging
-app.use((req, res, next) => {
-  logger.info(`${req.method} ${req.path}`, {
-    ip: req.ip,
-    userAgent: req.get('User-Agent')
-  });
-  next();
-});
+// app.use((req, res, next) => {
+//   logger.info(`${req.method} ${req.path}`, {
+//     ip: req.ip,
+//     userAgent: req.get('User-Agent')
+//   });
+//   next();
+// });
 
 // API Routes
 app.use('/api', apiRoutes);
@@ -73,6 +74,9 @@ const connectDB = async () => {
 // Start server
 const startServer = async () => {
   await connectDB();
+  
+  // Initialize default admin user if database is empty
+  await initializeDefaultAdmin();
   
   app.listen(PORT, () => {
     logger.info(`Server running on port ${PORT}`);

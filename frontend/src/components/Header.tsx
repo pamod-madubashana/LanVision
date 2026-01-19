@@ -14,31 +14,31 @@ const Header: React.FC = () => {
 
   return (
     <header className="bg-white shadow">
-      <div className="container mx-auto px-4">
+      <div className="w-full px-4">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
+          <Link to="/" className="flex items-center space-x-2" data-discover="true">
             <div className="bg-blue-600 text-white p-2 rounded-lg">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
               </svg>
             </div>
-            <span className="text-xl font-bold text-gray-900">NetScope</span>
+            <span className="text-xl font-bold text-gray-900">LanVision</span>
           </Link>
 
           {/* Navigation */}
           {isAuthenticated && (
             <nav className="hidden md:flex space-x-8">
-              <Link to="/dashboard" className="text-gray-700 hover:text-blue-600 transition-colors">
+              <Link to="/dashboard" className="text-gray-700 hover:text-blue-600 transition-colors" data-discover="true">
                 Dashboard
               </Link>
-              <Link to="/scan/new" className="text-gray-700 hover:text-blue-600 transition-colors">
+              <Link to="/scan/new" className="text-gray-700 hover:text-blue-600 transition-colors" data-discover="true">
                 New Scan
               </Link>
-              <Link to="/history" className="text-gray-700 hover:text-blue-600 transition-colors">
+              <Link to="/history" className="text-gray-700 hover:text-blue-600 transition-colors" data-discover="true">
                 History
               </Link>
-              <Link to="/compare" className="text-gray-700 hover:text-blue-600 transition-colors">
+              <Link to="/compare" className="text-gray-700 hover:text-blue-600 transition-colors" data-discover="true">
                 Compare
               </Link>
             </nav>

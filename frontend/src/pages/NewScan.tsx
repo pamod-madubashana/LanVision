@@ -79,7 +79,7 @@ const NewScan: React.FC = () => {
   }
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="w-full max-w-6xl mx-auto">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">New Network Scan</h1>
         <p className="mt-2 text-gray-600">
