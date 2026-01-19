@@ -80,7 +80,7 @@ const DEFAULT_SCAN_CONFIG = {
 };
 
 // Validation functions
-function validateTarget(target) {
+function validateTarget(target: string) {
   if (!target || target.trim().length === 0) {
     return { field: 'target', message: 'Target is required' };
   }
@@ -114,7 +114,7 @@ function validateTarget(target) {
   return null;
 }
 
-function validatePortsCustom(ports) {
+function validatePortsCustom(ports: string) {
   if (!ports || ports.trim().length === 0) {
     return null;
   }
@@ -144,7 +144,7 @@ function validatePortsCustom(ports) {
   return null;
 }
 
-function validateNumericField(value, fieldName, min, max) {
+function validateNumericField(value: number | undefined, fieldName: string, min: number, max: number) {
   if (value === undefined) {
     return null;
   }
@@ -161,7 +161,7 @@ function validateNumericField(value, fieldName, min, max) {
 }
 
 // Arguments builder
-function buildNmapArgs(config) {
+function buildNmapArgs(config: any) {
   const args = [];
   
   // Always include XML output to stdout
@@ -262,30 +262,30 @@ function buildNmapArgs(config) {
   return args;
 }
 
-function generateCommandPreview(config) {
+function generateCommandPreview(config: any) {
   const args = buildNmapArgs(config);
   const argsWithoutTarget = args.slice(0, -1);
   return `nmap ${argsWithoutTarget.join(' ')} <target>`;
 }
 
 // Test runner
-function runTest(name, testFn) {
+function runTest(name: string, testFn: () => void) {
   try {
     testFn();
     console.log(`✓ ${name}`);
-  } catch (error) {
+  } catch (error: any) {
     console.error(`✗ ${name}:`, error.message);
     throw error;
   }
 }
 
-function assert(condition, message) {
+function assert(condition: boolean, message: string) {
   if (!condition) {
     throw new Error(message);
   }
 }
 
-function assertEqual(actual, expected, message) {
+function assertEqual(actual: any, expected: any, message: string) {
   assert(JSON.stringify(actual) === JSON.stringify(expected), `${message} - Expected: ${JSON.stringify(expected)}, Got: ${JSON.stringify(actual)}`);
 }
 
@@ -406,30 +406,26 @@ runTest('Command preview generation', () => {
 runTest('Public IP rejection for security', () => {
   const error = validateTarget('8.8.8.8');
   assert(error !== null, 'Should reject public IP addresses');
-  assert(error.field === 'target', 'Should have target field error');
-  assert(error.message.includes('restricted'), 'Should mention restriction');
+  assert(error !== null && error.field === 'target', 'Should have target field error');
+  assert(error !== null && error.message.includes('restricted'), 'Should mention restriction');
 });
 
 // Test 9: Invalid port rejection
 runTest('Invalid port rejection', () => {
   const error = validatePortsCustom('invalid,port,65536');
   assert(error !== null, 'Should reject invalid ports');
-  assert(error.field === 'portsCustom', 'Should have portsCustom field error');
+  assert(error !== null && error.field === 'portsCustom', 'Should have portsCustom field error');
 });
 
 // Test 10: Profile-based configuration override
 runTest('Profile defaults with user overrides', () => {
   const config = {
+    ...PROFILE_PRESETS.balanced,
     target: '192.168.1.1',
     scanProfile: 'balanced',
     serviceDetection: false, // Override profile default
     hostTimeoutSeconds: 900, // Override profile default
-    ...PROFILE_PRESETS.balanced
   };
-  
-  // Apply user overrides
-  config.serviceDetection = false;
-  config.hostTimeoutSeconds = 900;
   
   const args = buildNmapArgs(config);
   assert(!args.includes('-sV'), 'Should respect user override to disable service detection');
