@@ -708,41 +708,45 @@ export class ScanController {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
-        'X-Accel-Buffering': 'no' // Disable buffering for nginx
+        'X-Accel-Buffering': 'no', // Disable buffering for nginx
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Cache-Control'
       });
+
+      // Helper function to send and flush data
+      const sendData = (event: string, data: any) => {
+        res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+        // Flush the response to ensure immediate delivery
+        res.flushHeaders && res.flushHeaders();
+      };
 
       // Send initial connection confirmation
       const connectedData = { scanId: scanId as string, status: session.status };
-      res.write(`event: connected\ndata: ${JSON.stringify(connectedData)}\n\n`);
+      sendData('connected', connectedData);
 
       // Send existing buffered logs immediately
       if (session.logs.length > 0) {
         session.logs.forEach(log => {
-          const dataObj = { message: log };
-          res.write(`event: log\ndata: ${JSON.stringify(dataObj)}\n\n`);
+          sendData('log', { message: log });
         });
       }
 
       // Set up event listeners for real-time updates
       const logHandler = (event: any) => {
-        const dataObj = { message: event.message };
-        res.write(`event: log\ndata: ${JSON.stringify(dataObj)}\n\n`);
+        sendData('log', { message: event.message });
       };
 
       const statusHandler = (event: any) => {
-        const dataObj = { status: event.status };
-        res.write(`event: status\ndata: ${JSON.stringify(dataObj)}\n\n`);
+        sendData('status', { status: event.status });
       };
 
       const doneHandler = (event: any) => {
-        const dataObj = { result: event.result };
-        res.write(`event: done\ndata: ${JSON.stringify(dataObj)}\n\n`);
+        sendData('done', { result: event.result });
         cleanup();
       };
 
       const errorHandler = (event: any) => {
-        const dataObj = { message: event.message };
-        res.write(`event: error\ndata: ${JSON.stringify(dataObj)}\n\n`);
+        sendData('error', { message: event.message });
         cleanup();
       };
 
@@ -768,6 +772,7 @@ export class ScanController {
       // Keep connection alive
       const keepAlive = setInterval(() => {
         res.write(': keep-alive\n\n');
+        res.flushHeaders && res.flushHeaders();
       }, 25000);
 
       // Cleanup keep-alive on disconnect
