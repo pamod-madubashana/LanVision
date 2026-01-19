@@ -3,6 +3,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import NewScan from './pages/NewScan';
+import ScanBuilder from './pages/ScanBuilder';
 import ScanResults from './pages/ScanResults';
 import HostDetails from './pages/HostDetails';
 import ScanHistory from './pages/ScanHistory';
@@ -21,6 +22,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/scan/new" element={<NewScan />} />
+              <Route path="/scan/builder" element={<ScanBuilder />} />
               <Route path="/scan/:scanId" element={<ScanResults />} />
               <Route path="/scan/:scanId/host/:hostId" element={<HostDetails />} />
               <Route path="/history" element={<ScanHistory />} />
