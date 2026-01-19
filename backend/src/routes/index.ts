@@ -6,6 +6,7 @@ const router = Router();
 
 // API Routes
 router.use('/auth', authRoutes);
+router.use('/scans', scanRoutes);
 
 // Health check
 router.get('/health', (req, res) => {
