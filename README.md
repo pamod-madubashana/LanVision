@@ -1,201 +1,106 @@
-# Network Scanner Dashboard (NetScope)
+# LanVision - Network Security Scanner
 
-A full-stack web application for network scanning and security assessment using Nmap, built with React, Node.js, and MongoDB.
+LanVision is a comprehensive network security assessment platform that provides real-time network scanning capabilities using Nmap. The platform offers a modern web interface for conducting network scans, analyzing results, and tracking security vulnerabilities.
 
 ## Features
 
-### 🎯 Core Functionality
-- **Network Scanning**: Scan IP addresses, ranges, and CIDR blocks using Nmap
-- **Security Assessment**: Automatic risk scoring based on discovered services
-- **Scan History**: Store and review previous scan results
-- **Comparison Tool**: Compare scans to track network changes over time
-- **Real-time Updates**: Live scan progress monitoring
+- **Real-time Scan Monitoring**: Live streaming of Nmap scan progress with Server-Sent Events (SSE)
+- **Comprehensive Network Scanning**: Supports various Nmap profiles (quick, balanced, full, custom)
+- **Interactive Dashboard**: Visual representation of scan results with risk assessment
+- **Scan History**: Track and compare previous scans
+- **Detailed Host Analysis**: Comprehensive information about discovered hosts and services
+- **Risk Scoring**: Automated security risk assessment for discovered vulnerabilities
+- **Cross-platform Support**: Works on Windows, macOS, and Linux
 
-### 🔒 Security Features
-- **JWT Authentication**: Secure user authentication and session management
-- **Role-based Access**: Admin and user roles with appropriate permissions
-- **Input Validation**: Strict validation to prevent command injection
-- **Rate Limiting**: Protection against abuse and automated attacks
-- **Audit Logging**: Comprehensive logging of all user actions
-- **Private Network Restriction**: Default restriction to RFC1918 private ranges
+## Architecture
 
-### 📊 Dashboard & Visualization
-- **Overview Statistics**: Quick insights into network status
-- **Risk Assessment**: Color-coded risk levels (Low/Medium/High)
-- **Detailed Host Information**: Port listings, service detection, OS guessing
-- **Responsive Design**: Mobile-friendly interface with Tailwind CSS
+LanVision is built with a modern full-stack architecture:
 
-## Tech Stack
-
-### Backend
-- **Node.js** with TypeScript
-- **Express.js** REST API
-- **MongoDB** with Mongoose ODM
-- **Nmap** CLI integration
-- **JWT** for authentication
-- **Helmet** for security headers
-
-### Frontend
-- **React** with TypeScript
-- **Tailwind CSS** for styling
-- **React Router** for navigation
-- **Axios** for API communication
-- **Heroicons** for UI icons
+- **Frontend**: React with TypeScript, Tailwind CSS, and Vite
+- **Backend**: Node.js with Express and TypeScript
+- **Database**: MongoDB for storing scan results and user data
+- **Scanning Engine**: Nmap for network discovery and security auditing
 
 ## Prerequisites
 
+Before installing LanVision, ensure you have the following software installed:
+
 - Node.js (v16 or higher)
+- npm or yarn package manager
 - MongoDB (local or cloud instance)
-- Nmap (network scanning tool)
-- Git
+- Nmap (network mapping tool)
+
+### Installing Nmap
+
+**Windows:**
+- Download from [https://nmap.org/download.html](https://nmap.org/download.html)
+- Install with default settings
+- Ensure `nmap.exe` is in your system PATH
+
+**macOS:**
+```bash
+brew install nmap
+```
+
+**Linux (Ubuntu/Debian):**
+```bash
+sudo apt-get update
+sudo apt-get install nmap
+```
+
+**Linux (CentOS/RHEL/Fedora):**
+```bash
+sudo yum install nmap
+# or
+sudo dnf install nmap
+```
 
 ## Installation
 
-### 1. Clone the Repository
+1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/yourusername/LanVision.git
 cd LanVision
 ```
 
-### 2. Backend Setup
+2. Install dependencies for both backend and frontend:
 ```bash
+npm install
 cd backend
 npm install
-
-# Copy environment file
-cp .env.example .env
-
-# Edit .env with your configuration:
-# - MONGO_URI: Your MongoDB connection string
-# - JWT_SECRET: Strong secret key for JWT tokens
-# - PORT: Backend server port (default: 3000)
-```
-
-### 3. Frontend Setup
-```bash
 cd ../frontend
 npm install
+cd ..
 ```
 
-## Nmap Installation
-
-### Windows
-1. Download Nmap from [nmap.org](https://nmap.org/download.html)
-2. Install and add to PATH
-3. Verify installation: `nmap --version`
-
-### Linux/macOS
-```bash
-# Ubuntu/Debian
-sudo apt-get install nmap
-
-# macOS (Homebrew)
-brew install nmap
-
-# Verify installation
-nmap --version
-```
-
-## Running the Application
-
-### Development Mode
-
-**Start Backend:**
-```bash
-cd backend
-npm run dev
-```
-
-**Start Frontend:**
-```bash
-cd frontend
-npm run dev
-```
-
-The application will be available at:
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:5000
-
-### Production Mode
-
-**Build and Start Backend:**
-```bash
-cd backend
-npm run build
-npm start
-```
-
-**Build and Start Frontend:**
-```bash
-cd frontend
-npm run build
-npm run preview
-```
-
-## Environment Variables
-
-### Backend (.env)
+3. Set up environment variables:
+Create a `.env` file in the `backend` directory based on the `.env.example`:
 ```env
-# MongoDB Connection
-MONGO_URI=mongodb://localhost:27017/netscope
-
-# JWT Secret (change this!)
-JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-
-# Server Configuration
-PORT=3000
 NODE_ENV=development
-
-# Security Configuration
-ADMIN_ALLOW_PUBLIC_SCAN=false
-
-# Rate Limiting
+PORT=5000
+MONGO_URI=mongodb://localhost:27017/lanvision
+JWT_SECRET=your_jwt_secret_key
+FRONTEND_URL=http://localhost:3000
+ADMIN_ALLOW_PUBLIC_SCAN=true
 RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX_REQUESTS=100
 ```
 
-## API Endpoints
+4. Start the development servers:
 
-### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - User login
-- `GET /api/auth/profile` - Get user profile
+**Backend:**
+```bash
+cd backend
+npm run dev
+```
 
-### Scans
-- `POST /api/scans/start` - Start new network scan
-- `GET /api/scans/:scanId` - Get scan results
-- `GET /api/scans` - Get scan history (paginated)
-- `GET /api/scans/:scanId/hosts/:hostId` - Get host details
-- `POST /api/scans/compare` - Compare two scans
+**Frontend:**
+```bash
+cd frontend
+npm run dev
+```
 
-## Security Notes
-
-⚠️ **Important Security Considerations:**
-
-1. **Network Restrictions**: By default, only private IP ranges (RFC1918) are allowed
-2. **Command Injection**: All user inputs are sanitized and validated
-3. **Rate Limiting**: Prevents abuse of the scanning functionality
-4. **Authentication Required**: All scan operations require valid JWT tokens
-5. **Admin Override**: Public IP scanning requires explicit admin configuration
-
-## Usage Guide
-
-### Getting Started
-1. Register a new account or log in with existing credentials
-2. Navigate to "New Scan" to start your first network scan
-3. Enter a target (IP, CIDR, or range) and select scan profile
-4. Monitor scan progress in real-time
-5. Review results and host details
-6. Use "Compare" to analyze network changes over time
-
-### Scan Profiles
-- **Quick Scan**: Fast scan focusing on common ports (`-T4 -F`)
-- **Full Scan**: Comprehensive scan with service and OS detection (`-sV -O`)
-
-### Risk Levels
-- **Low**: Common safe ports only (HTTP, HTTPS)
-- **Medium**: Administrative ports or multiple services
-- **High**: Known risky services (Telnet, FTP, SMB, databases)
+The application will be available at `http://localhost:3000`.
 
 ## Project Structure
 
@@ -203,34 +108,78 @@ RATE_LIMIT_MAX_REQUESTS=100
 LanVision/
 ├── backend/
 │   ├── src/
-│   │   ├── controllers/     # Request handlers
-│   │   ├── middleware/      # Auth, validation, error handling
-│   │   ├── models/          # MongoDB schemas
+│   │   ├── controllers/     # API controllers
+│   │   ├── middleware/      # Authentication and validation middleware
+│   │   ├── models/          # Database models
 │   │   ├── routes/          # API route definitions
-│   │   ├── services/        # Business logic (Nmap, parsing)
-│   │   ├── utils/           # Helper functions
-│   │   └── server.ts        # Main application entry
-│   ├── .env.example
-│   └── package.json
+│   │   ├── services/        # Business logic and external integrations
+│   │   │   └── parser/      # Data parsing utilities
+│   │   ├── tests/           # Test files
+│   │   └── utils/           # Utility functions
+│   └── ...
 ├── frontend/
 │   ├── src/
-│   │   ├── api/             # API service layer
+│   │   ├── api/             # API service functions
 │   │   ├── components/      # Reusable UI components
 │   │   ├── contexts/        # React context providers
-│   │   ├── pages/           # Page components
-│   │   ├── App.tsx          # Main application component
-│   │   └── main.tsx         # Entry point
-│   └── package.json
-└── README.md
+│   │   ├── pages/           # Application pages/views
+│   │   └── types/           # TypeScript type definitions
+│   └── ...
+├── README.md
+└── ...
+```
+
+## Usage
+
+1. **Create Account/Login**: Register or login to access the scanning features
+2. **Configure Scan**: Select target IP/network range and scan profile
+3. **Start Scan**: Initiate the network scan
+4. **Monitor Progress**: Watch real-time scan progress in the live log stream
+5. **Review Results**: Analyze discovered hosts, open ports, services, and risk assessments
+6. **Export/Compare**: Save results or compare with previous scans
+
+## API Endpoints
+
+The backend provides a RESTful API with the following main endpoints:
+
+- `POST /api/scans/start` - Start a new scan
+- `POST /api/scans/builder/start` - Start a custom scan with advanced options
+- `GET /api/scans/:scanId` - Get scan results
+- `GET /api/scans/:scanId/stream` - Stream real-time scan logs (SSE)
+- `GET /api/scans` - Get scan history
+- `POST /api/scans/compare` - Compare two scan results
+- `GET /api/scans/health/nmap` - Check Nmap availability
+
+## Security Features
+
+- JWT-based authentication
+- Rate limiting to prevent abuse
+- Input sanitization to prevent command injection
+- Secure session management
+- Protected scan history (users can only access their own scans)
+
+## Development
+
+To contribute to LanVision:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Commit your changes (`git commit -m 'Add amazing feature'`)
+5. Push to the branch (`git push origin feature/amazing-feature`)
+6. Open a Pull Request
+
+### Running Tests
+
+Backend tests:
+```bash
+cd backend
+npm test
 ```
 
 ## Contributing
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+We welcome contributions! Please see our contributing guidelines for details on how to participate in the project.
 
 ## License
 
@@ -238,7 +187,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Acknowledgments
 
-- [Nmap](https://nmap.org/) - Network discovery and security auditing tool
-- [MongoDB](https://www.mongodb.com/) - Database solution
-- [React](https://reactjs.org/) - Frontend library
-- [Tailwind CSS](https://tailwindcss.com/) - Styling framework
+- Built with the powerful Nmap network exploration tool
+- Inspired by the need for accessible network security tools
+- Thanks to the open-source community for the technologies that power this project
