@@ -335,10 +335,21 @@ export class NmapService {
       let stdout = '';
       let stderr = '';
 
-      // Handle stdout (XML output)
+      // Handle stdout (XML output and some progress logs)
       nmapProcess.stdout.on('data', (data) => {
         const chunk = data.toString();
         stdout += chunk;
+        
+        // Some progress info might come through stdout
+        const lines = chunk.split('\n');
+        lines.forEach((line: string) => {
+          const trimmedLine = line.trim();
+          if (trimmedLine && (trimmedLine.includes('Stats') || trimmedLine.includes('NSE') || trimmedLine.includes('%') || trimmedLine.includes('scan report'))) {
+            logger.debug('Adding stdout log to session', { sessionId, line: trimmedLine });
+            scanSessionManager.addLog(sessionId, trimmedLine);
+          }
+        });
+        
         // Append to session's XML buffer
         scanSessionManager.appendXmlOutput(sessionId, chunk);
       });
@@ -353,6 +364,7 @@ export class NmapService {
         lines.forEach((line: string) => {
           const trimmedLine = line.trim();
           if (trimmedLine) {
+            logger.debug('Adding log to session', { sessionId, line: trimmedLine });
             scanSessionManager.addLog(sessionId, trimmedLine);
           }
         });

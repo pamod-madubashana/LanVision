@@ -56,6 +56,8 @@ export class ScanController {
         status: 'pending'
       });
 
+      logger.info('Scan session created', { sessionId: scan._id.toString(), target, profile, userId });
+
       await scan.save();
 
       // Create scan session for streaming
@@ -127,7 +129,7 @@ export class ScanController {
         tcpConnectScan: true,
         udpScan: false,
         treatAsOnline: false,
-        verbosity: 1
+        verbosity: 2  // Higher verbosity for more detailed progress logs
       };
 
       // Execute Nmap scan with streaming
@@ -490,6 +492,8 @@ export class ScanController {
         status: 'pending'
       });
 
+      logger.info('Custom scan session created', { sessionId: scan._id.toString(), target: scanConfig.target, profile: scanConfig.scanProfile, userId });
+
       await scan.save();
 
       // Create scan session BEFORE starting execution
@@ -646,8 +650,19 @@ export class ScanController {
         scanId, 
         sessionFound: !!session,
         sessionStatus: session?.status,
-        sessionUserId: session?.userId
+        sessionUserId: session?.userId,
+        requestedUserId: userId
       });
+      
+      // If session not found, check if scan exists in DB
+      if (!session) {
+        const dbScan = await Scan.findById(scanId);
+        logger.debug('DB scan lookup result', {
+          scanId,
+          dbScanFound: !!dbScan,
+          dbScanUserId: dbScan?.userId
+        });
+      }
       
       if (!session) {
         // Log all active sessions for debugging
