@@ -131,7 +131,7 @@ const NewScan: React.FC = () => {
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                className="shadow-sm text-black focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
                 placeholder="My Network Scan"
               />
             </div>
@@ -148,7 +148,7 @@ const NewScan: React.FC = () => {
                 required
                 value={target}
                 onChange={(e) => setTarget(e.target.value)}
-                className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                className="shadow-sm text-black focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
                 placeholder="192.168.1.0/24 or 192.168.1.1-254"
               />
             </div>
@@ -166,7 +166,7 @@ const NewScan: React.FC = () => {
                 id="profile"
                 value={profile}
                 onChange={(e) => setProfile(e.target.value as 'quick' | 'full')}
-                className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                className="shadow-sm text-black focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
               >
                 <option value="quick">Quick Scan (Fast, fewer ports)</option>
                 <option value="full">Full Scan (Service detection, OS detection)</option>
