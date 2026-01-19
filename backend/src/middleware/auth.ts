@@ -9,17 +9,23 @@ interface JwtPayload {
 declare global {
   namespace Express {
     interface Request {
-      user?: {
-        userId: string;
-        role: string;
-      };
+      user?: JwtPayload;
     }
   }
 }
 
 export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
+  // Check for token in Authorization header (Bearer)
   const authHeader = req.headers.authorization;
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  let token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  
+  // If no header token, check URL query parameter (for SSE connections)
+  if (!token && req.query.token) {
+    const queryToken = req.query.token;
+    if (typeof queryToken === 'string') {
+      token = queryToken;
+    }
+  }
 
   if (!token) {
     return res.status(401).json({
@@ -45,26 +51,4 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
       }
     });
   }
-};
-
-export const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (!req.user) {
-    return res.status(401).json({
-      success: false,
-      error: {
-        message: 'Authentication required'
-      }
-    });
-  }
-
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({
-      success: false,
-      error: {
-        message: 'Admin access required'
-      }
-    });
-  }
-
-  next();
 };

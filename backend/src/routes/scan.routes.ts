@@ -32,6 +32,9 @@ router.post('/builder/preview',
 
 router.get('/:scanId', ScanController.getScan);
 
+// Stream scan logs using Server-Sent Events
+router.get('/:scanId/stream', ScanController.streamScanLogs);
+
 router.get('/', ScanController.getScanHistory);
 
 router.get('/:scanId/hosts/:hostId', ScanController.getHostDetails);

@@ -3,8 +3,9 @@ import Scan from '../models/Scan';
 import { NmapService } from '../services/nmapService';
 import { NmapXmlParser } from '../services/parser/nmapXmlParser';
 import logger from '../utils/logger';
-import { ScanConfig } from '../types/scanConfig';
+import { ScanConfig, ScanProfile } from '../types/scanConfig';
 import { generateCommandPreview } from '../utils/nmapArgsBuilder';
+import scanSessionManager from '../services/scanSessionManager';
 
 interface ScanRequest {
   target: string;
@@ -57,14 +58,23 @@ export class ScanController {
 
       await scan.save();
 
+      // Create scan session for streaming
+      const session = scanSessionManager.createSession(
+        scan._id.toString(),
+        target,
+        profile,
+        userId
+      );
+
       logger.scanEvent(scan._id.toString(), 'started', { 
         target, 
         profile,
-        userId 
+        userId,
+        sessionId: session.id
       });
 
-      // Start scan in background
-      ScanController.executeScanInBackground(scan._id.toString());
+      // Start scan in background with streaming
+      ScanController.executeScanInBackground(scan._id.toString(), session.id);
 
       res.status(202).json({
         success: true,
@@ -86,8 +96,8 @@ export class ScanController {
     }
   }
 
-  // Execute scan in background
-  private static async executeScanInBackground(scanId: string) {
+  // Execute scan in background with streaming support
+  private static async executeScanInBackground(scanId: string, sessionId: string) {
     try {
       const scan = await Scan.findById(scanId);
       if (!scan) return;
@@ -98,11 +108,30 @@ export class ScanController {
       scan.status = 'running';
       await scan.save();
 
-      // Execute Nmap scan
-      const result = await nmapService.executeScan({
+      // Update session status to running
+      scanSessionManager.updateStatus(sessionId, 'running');
+
+      // Build scan config for streaming execution
+      const scanConfig: ScanConfig = {
         target: scan.target,
-        profile: scan.profile
-      });
+        scanProfile: scan.profile as ScanProfile,
+        timingTemplate: 'T4',
+        hostTimeoutSeconds: 600,
+        serviceDetection: scan.profile === 'full',
+        osDetection: scan.profile === 'full',
+        noDnsResolution: true,
+        skipHostDiscovery: false,
+        onlyOpenPorts: true,
+        portMode: 'default',
+        tcpSynScan: false,
+        tcpConnectScan: true,
+        udpScan: false,
+        treatAsOnline: false,
+        verbosity: 1
+      };
+
+      // Execute Nmap scan with streaming
+      const result = await nmapService.executeScanWithStreaming(scanConfig, scanId);
 
       // Parse results
       const parsedResult = new NmapXmlParser().parse(result.stdout);
@@ -130,10 +159,14 @@ export class ScanController {
 
       await scan.save();
 
+      // Mark session as completed
+      scanSessionManager.completeScan(sessionId, parsedResult);
+
       logger.scanEvent(scanId, 'completed', {
         hosts: parsedResult.stats.hostsUp,
         ports: parsedResult.stats.totalOpenPorts,
-        duration: parsedResult.stats.durationSeconds
+        duration: parsedResult.stats.durationSeconds,
+        sessionId
       });
 
     } catch (error: any) {
@@ -459,14 +492,18 @@ export class ScanController {
 
       await scan.save();
 
-      logger.scanEvent(scan._id.toString(), 'custom-started', { 
+      // Create scan session BEFORE starting execution
+      const sessionId = scan._id.toString();
+      scanSessionManager.createSession(sessionId, scanConfig.target, scanConfig.scanProfile, userId);
+      
+      logger.scanEvent(sessionId, 'custom-started', { 
         target: scanConfig.target, 
         profile: scanConfig.scanProfile,
         userId 
       });
 
-      // Start custom scan in background
-      ScanController.executeCustomScanInBackground(scan._id.toString(), scanConfig);
+      // Start custom scan with streaming
+      ScanController.executeCustomScanWithStreaming(sessionId, scanConfig, userId);
 
       res.status(202).json({
         success: true,
@@ -488,24 +525,28 @@ export class ScanController {
     }
   }
 
-  // Execute custom scan in background
-  private static async executeCustomScanInBackground(scanId: string, scanConfig: ScanConfig) {
+  // Execute custom scan with streaming
+  private static async executeCustomScanWithStreaming(scanId: string, scanConfig: ScanConfig, userId: string) {
     try {
       const scan = await Scan.findById(scanId);
       if (!scan) return;
 
       const nmapService = NmapService.getInstance();
       
+      // Session already created in startCustomScan method
+      // Debug: Verify session exists
+      const session = scanSessionManager.getSession(scanId);
+      logger.debug('Session verification in execution', { sessionId: scanId, sessionExists: !!session });
+      
       // Update status to running
       scan.status = 'running';
       await scan.save();
 
-      // Execute Nmap scan with custom configuration
-      const result = await nmapService.executeScanBuilder(scanConfig);
+      // Execute Nmap scan with streaming
+      const result = await nmapService.executeScanWithStreaming(scanConfig, scanId);
 
       // Parse results
       const parsedResult = new NmapXmlParser().parse(result.stdout);
-
       // Update scan with results
       scan.results = parsedResult.hosts;
       scan.summary = {
@@ -578,6 +619,153 @@ export class ScanController {
           message: 'Failed to generate command preview'
         }
       });
+    }
+  }
+
+  // Stream scan progress logs using Server-Sent Events
+  static async streamScanLogs(req: Request, res: Response) {
+    try {
+      const scanId = Array.isArray(req.params.scanId) ? req.params.scanId[0] : req.params.scanId;
+      const userId = (req as any).user?.userId;
+
+      logger.debug('Stream endpoint called', { scanId, userId: userId || 'no-user' });
+
+      if (!userId) {
+        logger.warn('Stream request without authentication', { scanId });
+        return res.status(401).json({
+          success: false,
+          error: {
+            message: 'Authentication required'
+          }
+        });
+      }
+
+      // Check if session exists
+      const session = scanSessionManager.getSession(scanId as string);
+      logger.debug('Session lookup result', { 
+        scanId, 
+        sessionFound: !!session,
+        sessionStatus: session?.status,
+        sessionUserId: session?.userId
+      });
+      
+      if (!session) {
+        // Log all active sessions for debugging
+        const userSessions = scanSessionManager.getUserSessions(userId);
+        logger.debug('User sessions', { 
+          userId, 
+          sessionCount: userSessions.length,
+          sessionIds: userSessions.map(s => s.id)
+        });
+        
+        // Log all sessions in memory for comprehensive debugging
+        const allSessions = Array.from(scanSessionManager['sessions'].entries());
+        logger.debug('All sessions in memory', {
+          totalSessions: allSessions.length,
+          sessionDetails: allSessions.map(([id, sess]) => ({
+            id,
+            status: sess.status,
+            userId: sess.userId,
+            createdAt: sess.createdAt
+          }))
+        });
+        
+        return res.status(404).json({
+          success: false,
+          error: {
+            message: 'Scan session not found'
+          }
+        });
+      }
+
+      // Verify user owns this scan
+      if (session.userId !== userId) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            message: 'Access denied'
+          }
+        });
+      }
+
+      // Set SSE headers
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no' // Disable buffering for nginx
+      });
+
+      // Send initial connection confirmation
+      res.write(`event: connected\ndata: {"scanId":"${scanId}","status":"${session.status}"}\n\n`);
+
+      // Send existing buffered logs immediately
+      if (session.logs.length > 0) {
+        session.logs.forEach(log => {
+          res.write(`event: log\ndata: {"message":"${log.replace(/"/g, '\\"')}"}\n\n`);
+        });
+      }
+
+      // Set up event listeners for real-time updates
+      const logHandler = (event: any) => {
+        res.write(`event: log\ndata: {"message":"${event.message.replace(/"/g, '\\"')}"}\n\n`);
+      };
+
+      const statusHandler = (event: any) => {
+        res.write(`event: status\ndata: {"status":"${event.status}"}\n\n`);
+      };
+
+      const doneHandler = (event: any) => {
+        res.write(`event: done\ndata: {"result":${JSON.stringify(event.result)}}\n\n`);
+        cleanup();
+      };
+
+      const errorHandler = (event: any) => {
+        res.write(`event: error\ndata: {"message":"${event.message.replace(/"/g, '\\"')}"}\n\n`);
+        cleanup();
+      };
+
+      // Register event listeners
+      scanSessionManager.onLog(scanId as string, logHandler);
+      scanSessionManager.onStatus(scanId as string, statusHandler);
+      scanSessionManager.onDone(scanId as string, doneHandler);
+      scanSessionManager.onError(scanId as string, errorHandler);
+
+      // Cleanup function
+      const cleanup = () => {
+        scanSessionManager.offLog(scanId as string, logHandler);
+        scanSessionManager.offStatus(scanId as string, statusHandler);
+        scanSessionManager.offDone(scanId as string, doneHandler);
+        scanSessionManager.offError(scanId as string, errorHandler);
+        res.end();
+      };
+
+      // Handle client disconnect
+      req.on('close', cleanup);
+      req.on('error', cleanup);
+
+      // Keep connection alive
+      const keepAlive = setInterval(() => {
+        res.write(': keep-alive\n\n');
+      }, 25000);
+
+      // Cleanup keep-alive on disconnect
+      req.on('close', () => {
+        clearInterval(keepAlive);
+      });
+
+      logger.debug('SSE connection established', { scanId, userId });
+
+    } catch (error: any) {
+      logger.error('SSE stream error:', error);
+      if (!res.headersSent) {
+        res.status(500).json({
+          success: false,
+          error: {
+            message: 'Failed to establish log stream'
+          }
+        });
+      }
     }
   }
 }

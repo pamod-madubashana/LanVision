@@ -74,6 +74,9 @@ export const buildNmapArgs = (config: ScanConfig): string[] => {
   // Verbosity
   args.push(...buildVerbosityArgs(config.verbosity));
   
+  // Add stats every 2 seconds for streaming progress updates
+  args.push('--stats-every', '2s');
+  
   // Add target last
   args.push(config.target);
   

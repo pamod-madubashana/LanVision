@@ -4,6 +4,7 @@ import logger from '../utils/logger';
 import { ScanConfig } from '../types/scanConfig';
 import { validateScanConfig } from '../utils/scanValidation';
 import { buildNmapArgs, validateGeneratedArgs } from '../utils/nmapArgsBuilder';
+import scanSessionManager from './scanSessionManager';
 
 export interface NmapScanConfig {
   target: string;
@@ -88,6 +89,75 @@ export class NmapService {
       });
 
       throw new Error(`Custom Nmap scan failed: ${error.message}`);
+    }
+  }
+
+  // Execute Nmap scan with real-time log streaming
+  async executeScanWithStreaming(scanConfig: ScanConfig, sessionId: string): Promise<NmapScanResult> {
+    const startTime = Date.now();
+    
+    try {
+      // Validate scan configuration
+      const validationErrors = validateScanConfig(scanConfig);
+      if (validationErrors.length > 0) {
+        const errorMessages = validationErrors.map(e => `${e.field}: ${e.message}`).join('; ');
+        throw new Error(`Invalid scan configuration: ${errorMessages}`);
+      }
+
+      // Build Nmap arguments from ScanConfig
+      const args = buildNmapArgs(scanConfig);
+      
+      // Streaming arguments are already included in buildNmapArgs
+      // No additional flags needed here
+      
+      // Double-check generated arguments for safety
+      if (!validateGeneratedArgs(args)) {
+        throw new Error('Generated Nmap arguments failed safety validation');
+      }
+
+      logger.info('Starting streaming Nmap scan', { 
+        target: scanConfig.target, 
+        profile: scanConfig.scanProfile,
+        sessionId,
+        args: args.filter(arg => arg !== scanConfig.target) // Log without target for security
+      });
+
+      // Execute Nmap with streaming
+      const timeoutBuffer = 30000; // 30 second buffer
+      const totalTimeout = (scanConfig.hostTimeoutSeconds * 1000) + timeoutBuffer;
+      
+      const result = await this.runNmapCommandWithStreaming(args, totalTimeout, sessionId);
+      
+      const duration = Date.now() - startTime;
+      
+      logger.scanEvent('nmap-streaming-scan', 'completed', {
+        target: scanConfig.target,
+        profile: scanConfig.scanProfile,
+        sessionId,
+        duration,
+        exitCode: result.exitCode
+      });
+
+      return {
+        ...result,
+        duration
+      };
+
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      
+      logger.error('Streaming Nmap scan failed', {
+        target: scanConfig.target,
+        profile: scanConfig.scanProfile,
+        sessionId,
+        error: error.message,
+        duration
+      });
+
+      // Mark session as failed
+      scanSessionManager.failScan(sessionId, error.message);
+      
+      throw new Error(`Streaming Nmap scan failed: ${error.message}`);
     }
   }
 
@@ -240,6 +310,87 @@ export class NmapService {
           reject(new Error(`Nmap scan timed out after ${timeout}ms`));
         }
       }, timeout);
+    });
+  }
+
+  // Execute Nmap command with real-time log streaming
+  private runNmapCommandWithStreaming(args: string[], timeoutMs: number, sessionId: string): Promise<NmapScanResult> {
+    return new Promise((resolve, reject) => {
+      const timeout = timeoutMs;
+      
+      // Determine Nmap executable based on OS
+      const nmapExecutable = process.platform === 'win32' ? 'nmap.exe' : 'nmap';
+      
+      logger.debug('Executing streaming Nmap command', { 
+        executable: nmapExecutable,
+        sessionId,
+        args: args.map(escapeShellArg)
+      });
+
+      const nmapProcess = spawn(nmapExecutable, args, {
+        windowsHide: true,
+        timeout: timeout
+      });
+
+      let stdout = '';
+      let stderr = '';
+
+      // Handle stdout (XML output)
+      nmapProcess.stdout.on('data', (data) => {
+        const chunk = data.toString();
+        stdout += chunk;
+        // Append to session's XML buffer
+        scanSessionManager.appendXmlOutput(sessionId, chunk);
+      });
+
+      // Handle stderr (progress logs)
+      nmapProcess.stderr.on('data', (data) => {
+        const chunk = data.toString();
+        stderr += chunk;
+        
+        // Split into lines and add each as a log entry
+        const lines = chunk.split('\n');
+        lines.forEach((line: string) => {
+          const trimmedLine = line.trim();
+          if (trimmedLine) {
+            scanSessionManager.addLog(sessionId, trimmedLine);
+          }
+        });
+      });
+
+      nmapProcess.on('close', (code) => {
+        logger.debug('Nmap process closed', { sessionId, exitCode: code });
+        resolve({
+          stdout,
+          stderr,
+          exitCode: code,
+          duration: 0 // Will be set by caller
+        });
+      });
+
+      nmapProcess.on('error', (error) => {
+        logger.error('Nmap process error', { sessionId, error: error.message });
+        if (error.message.includes('spawn nmap')) {
+          reject(new Error('Nmap is not installed or not in PATH. Please install Nmap to use this feature.'));
+        } else {
+          reject(new Error(`Nmap execution error: ${error.message}`));
+        }
+      });
+
+      // Handle timeout
+      const timeoutHandle = setTimeout(() => {
+        if (!nmapProcess.killed) {
+          nmapProcess.kill();
+          const errorMsg = `Nmap scan timed out after ${timeout}ms`;
+          scanSessionManager.failScan(sessionId, errorMsg);
+          reject(new Error(errorMsg));
+        }
+      }, timeout);
+
+      // Clear timeout on process completion
+      nmapProcess.on('close', () => {
+        clearTimeout(timeoutHandle);
+      });
     });
   }
 

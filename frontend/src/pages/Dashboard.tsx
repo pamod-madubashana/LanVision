@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../api/apiService';
-import Card from '../components/Card';
+
 import LoadingSpinner from '../components/LoadingSpinner';
 import { 
   ServerIcon, 

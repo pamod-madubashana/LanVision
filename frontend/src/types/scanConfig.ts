@@ -126,3 +126,58 @@ export interface CommandPreviewResponse {
     message: string;
   };
 }
+
+// Streaming types for real-time scan logs
+export type ScanStatus = 'starting' | 'running' | 'done' | 'error';
+
+export interface ScanLogEvent {
+  message: string;
+}
+
+export interface ScanStatusEvent {
+  status: ScanStatus;
+}
+
+export interface ScanDoneEvent {
+  result: any; // Parsed scan result
+}
+
+export interface ScanErrorEvent {
+  message: string;
+}
+
+export interface ScanSession {
+  id: string;
+  status: ScanStatus;
+  logs: string[];
+  result: any | null;
+  errorMessage: string | null;
+}
+
+// EventSource message types
+export interface SSEMessage {
+  event: 'connected' | 'log' | 'status' | 'done' | 'error';
+  data: string;
+}
+
+// Parsed event data types
+export interface ConnectedEventData {
+  scanId: string;
+  status: ScanStatus;
+}
+
+export interface LogEventData {
+  message: string;
+}
+
+export interface StatusEventData {
+  status: ScanStatus;
+}
+
+export interface DoneEventData {
+  result: any;
+}
+
+export interface ErrorEventData {
+  message: string;
+}
