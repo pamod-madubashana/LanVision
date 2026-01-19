@@ -40,11 +40,5 @@ const UserSchema = new Schema<IUser>({
   timestamps: true
 });
 
-// Static method for password comparison
-UserSchema.statics.comparePassword = async function(password: string, hashedPassword: string) {
-  // This will be implemented in the auth service
-  return false;
-};
-
 const User = mongoose.model<IUser>('User', UserSchema);
 export default User;
