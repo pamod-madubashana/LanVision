@@ -257,7 +257,7 @@ export class ScanController {
     }
   }
 
-  // Get host details from scan
+  // Get host details from scan - simplified approach
   static async getHostDetails(req: Request, res: Response) {
     try {
       const { scanId, hostId } = req.params;
@@ -283,9 +283,10 @@ export class ScanController {
         });
       }
 
-      const host = scan.results.find(h => h._id?.toString() === hostId);
-      
-      if (!host) {
+      // Since we can't reliably find by _id in the results array,
+      // we'll return the host by index or implement a different approach
+      const hostIndex = parseInt(Array.isArray(hostId) ? hostId[0] : hostId);
+      if (isNaN(hostIndex) || hostIndex < 0 || hostIndex >= scan.results.length) {
         return res.status(404).json({
           success: false,
           error: {
@@ -293,6 +294,8 @@ export class ScanController {
           }
         });
       }
+
+      const host = scan.results[hostIndex];
 
       res.json({
         success: true,

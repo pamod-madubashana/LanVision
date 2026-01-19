@@ -1,4 +1,4 @@
-import axios, { type AxiosInstance, type AxiosResponse } from 'axios';
+import axios, { type AxiosInstance } from 'axios';
 
 const API_BASE_URL = 'http://localhost:3000/api';
 
