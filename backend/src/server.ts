@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import { errorHandler, notFound } from './middleware/errorHandler';
 import { rateLimiter } from './middleware/rateLimit';
 import logger from './utils/logger';
+import apiRoutes from './routes/index';
 
 // Load environment variables
 dotenv.config();
@@ -46,7 +47,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// Health check endpoint
+// API Routes
+app.use('/api', apiRoutes);
+
+// Legacy health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'OK', 
