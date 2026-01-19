@@ -1,5 +1,0 @@
-{"timestamp":"2026-01-19T16:38:32.192Z","level":"ERROR","message":"Database connection error:","meta":{}}
-{"timestamp":"2026-01-19T16:42:17.842Z","level":"INFO","message":"MongoDB Connected: ac-iufwl7h-shard-00-00.otwa5la.mongodb.net"}
-{"timestamp":"2026-01-19T16:42:17.848Z","level":"INFO","message":"Server running on port 5000"}
-{"timestamp":"2026-01-19T16:42:17.849Z","level":"INFO","message":"Environment: development"}
-{"timestamp":"2026-01-19T16:42:17.849Z","level":"INFO","message":"Public scan override: false"}
