@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import NewScan from './pages/NewScan';
 import ScanResults from './pages/ScanResults';
+import HostDetails from './pages/HostDetails';
 import ScanHistory from './pages/ScanHistory';
 import Header from './components/Header';
 
@@ -20,6 +21,7 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/scan/new" element={<NewScan />} />
               <Route path="/scan/:scanId" element={<ScanResults />} />
+              <Route path="/scan/:scanId/host/:hostId" element={<HostDetails />} />
               <Route path="/history" element={<ScanHistory />} />
             </Routes>
           </main>
